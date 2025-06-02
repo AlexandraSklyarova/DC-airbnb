@@ -122,8 +122,8 @@ with col2:
     ).add_params(
         highlight
     ).properties(
-        width=900,
-        height=500,
+        width=1200,
+        height=600,
         title='Listings by Price and Neighborhood'
     ).interactive()
 
