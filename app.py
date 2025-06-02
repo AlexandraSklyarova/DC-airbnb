@@ -54,8 +54,8 @@ with col1:
         y=alt.Y(f'{agg_col}:Q', title=f'{metric} (365d)'),
         tooltip=['host_neighbourhood', f'{agg_col}']
     ).properties(
-        width=700,
-        height=400,
+        width=900,
+        height=600,
         title=f'Top {top_n} Neighborhoods by Listing Count: {metric}'
     ).configure_axisX(
         labelAngle=-45
@@ -66,21 +66,23 @@ with col1:
     # Spacer between charts
     st.markdown("###")
 
-    st.header("🛏️ Room Types: Beds, Baths, Accommodates")
+   st.header("🛏️ Room Types: Beds, Baths, Accommodates")
 
-    bubble_chart = alt.Chart(df).mark_circle().encode(
-        x=alt.X('room_type:N', title='Room Type'),
-        y=alt.Y('accommodates:Q', title='Accommodates'),
-        size=alt.Size('beds:Q', title='Beds'),
-        color=alt.Color('bathrooms:Q', title='Bathrooms', scale=alt.Scale(scheme='blues')),
-        tooltip=['room_type', 'accommodates', 'beds', 'bathrooms']
-    ).properties(
-        width=700,
-        height=400,
-        title='Beds, Bathrooms, Room Type vs Accommodates'
-    )
+# Create chart
+bubble_chart = alt.Chart(df).mark_circle().encode(
+    x=alt.X('room_type:N', title='Room Type'),
+    y=alt.Y('accommodates:Q', title='Accommodates'),
+    size=alt.Size('beds:Q', title='Beds'),
+    color=alt.Color('bathrooms:Q', title='Bathrooms', scale=alt.Scale(scheme='blues')),
+    tooltip=['room_type', 'accommodates', 'beds', 'bathrooms']
+).properties(
+    width=900,
+    height=600,
+    title='Beds, Bathrooms, Room Type vs Accommodates'
+)
 
-    st.altair_chart(bubble_chart, use_container_width=True)
+st.altair_chart(bubble_chart, use_container_width=True)
+
 
 with col2:
     st.header("💵 Price vs Number of Listings")
@@ -101,8 +103,8 @@ with col2:
     ).add_params(
         highlight
     ).properties(
-        width=600,
-        height=850,
+        width=900,
+        height=800,
         title='Listings by Price and Neighborhood'
     ).interactive()
 
