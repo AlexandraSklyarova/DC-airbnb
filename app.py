@@ -112,7 +112,7 @@ scatter_chart = alt.Chart(df_price_plot).mark_circle(size=60).encode(
 st.altair_chart(scatter_chart, use_container_width=True)
 
 # --- Updated Strip Chart Linked to Same Selection ---
-strip_chart = alt.Chart(df_reviews).mark_tick(thickness=2, size=12).encode(
+strip_chart = alt.Chart(df_filtered).mark_tick(thickness=2, size=12).encode(
     x=alt.X('host_year:O', title='Host Since (Year)'),
     y=alt.Y('review_scores_rating:Q', title='Review Score Rating'),
     color=alt.Color('host_is_superhost:N',
