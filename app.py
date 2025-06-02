@@ -18,8 +18,9 @@ col1, col2 = st.columns(2)
 with col1:
     st.header("Neighborhood Revenue")
 
-    df_revenue = df[['host_neighbourhood', 'price', 'availability_365']].dropna()
-    df_revenue = df_revenue[df_revenue['host_neighbourhood'] != ""]
+    df_filtered = df[['host_neighbourhood', 'estimated_revenue_365d']].dropna()
+    df_filtered = df_filtered[df_filtered['host_neighbourhood'] != ""]
+
 
     metric = st.selectbox(
         "Select revenue metric:",
@@ -34,8 +35,8 @@ with col1:
     agg_func = 'mean' if metric == "Average Revenue" else 'sum'
     agg_col = 'avg_estimated_revenue' if metric == "Average Revenue" else 'total_estimated_revenue'
 
-    top_neighborhoods = df_revenue['host_neighbourhood'].value_counts().nlargest(top_n).index
-    df_top = df_revenue[df_revenue['host_neighbourhood'].isin(top_neighborhoods)]
+    top_neighborhoods = df_filtered['host_neighbourhood'].value_counts().nlargest(top_n).index
+    df_top = df[df['host_neighbourhood'].isin(top_neighborhoods)]
 
     df_grouped = df_top.groupby('host_neighbourhood', as_index=False).agg(
         {
