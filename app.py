@@ -106,7 +106,7 @@ scatter_chart = alt.Chart(df_price_plot).mark_circle(size=60).encode(
 ).properties(
     width=900,
     height=500,
-    title='Listings by Price and Neighborhood (Click on Mark to See Neighborhood Filter. Double Click to Deselct All)'
+    title='Listings by Price and Neighborhood (Click on Mark to See Neighborhood Filter. Double Click to Deselect All)'
 ).interactive()
 
 st.altair_chart(scatter_chart, use_container_width=True)
@@ -114,7 +114,7 @@ st.altair_chart(scatter_chart, use_container_width=True)
 # --- Updated Strip Chart Linked to Same Selection ---
 strip_chart = alt.Chart(df_filtered).mark_tick(thickness=2, size=12).encode(
     x=alt.X('host_year:O', title='Host Since (Year)'),
-    y=alt.Y('review_scores_rating:Q', title='Review Score Rating (Click on Mark to See Neighborhood Filter. Double Click to Deselct All)'),
+    y=alt.Y('review_scores_rating:Q', title='Review Score Rating'),
     color=alt.Color('host_is_superhost:N',
                     title='Superhost',
                     scale=alt.Scale(domain=['t', 'f'],
@@ -126,7 +126,7 @@ strip_chart = alt.Chart(df_filtered).mark_tick(thickness=2, size=12).encode(
 ).properties(
     width=900,
     height=500,
-    title='Review Scores by Host Year and Superhost Status'
+    title='Review Scores by Host Year and Superhost Status (Click on Mark to See Neighborhood Filter. Double Click to Deselect All)'
 )
 
 st.altair_chart(strip_chart, use_container_width=True)
