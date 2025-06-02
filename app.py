@@ -86,9 +86,15 @@ st.header("Price vs Number of Listings")
 df_price_plot = df_filtered[df_filtered['price'] < 1000][['host_neighbourhood', 'price']].copy()
 df_price_plot = df_price_plot.groupby(['price', 'host_neighbourhood']).size().reset_index(name='listing_count')
 
-highlight = alt.selection_point(fields=['host_neighbourhood'], nearest=True, on='click', clear='mouseout')
+# Selection that toggles on click (not mouseout)
+highlight = alt.selection_point(
+    fields=['host_neighbourhood'],
+    toggle=True,
+    nearest=True,
+    on="click"
+)
 
-# --- Updated Scatter Chart with selection on click ---
+# --- Updated Scatter Plot ---
 scatter_chart = alt.Chart(df_price_plot).mark_circle(size=60).encode(
     x=alt.X('price:Q', title='Price (USD)'),
     y=alt.Y('listing_count:Q', title='Number of Listings'),
@@ -105,7 +111,7 @@ scatter_chart = alt.Chart(df_price_plot).mark_circle(size=60).encode(
 
 st.altair_chart(scatter_chart, use_container_width=True)
 
-# --- Updated Strip Chart linked to same selection ---
+# --- Updated Strip Chart Linked to Same Selection ---
 strip_chart = alt.Chart(df_reviews).mark_tick(thickness=2, size=12).encode(
     x=alt.X('host_year:O', title='Host Since (Year)'),
     y=alt.Y('review_scores_rating:Q', title='Review Score Rating'),
