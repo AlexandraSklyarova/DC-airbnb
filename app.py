@@ -112,3 +112,34 @@ with col2:
     )
 
     st.altair_chart(chart2, use_container_width=True)
+
+st.markdown("---")
+st.header("Price vs Number of Listings (by Neighborhood)")
+
+# Clean and filter data
+df_price_plot = df[['host_neighbourhood', 'price']].dropna()
+df_price_plot = df_price_plot[df_price_plot['host_neighbourhood'] != ""]
+df_price_plot = df_price_plot[df_price_plot['price'] < 1000]  # Optional: clip high outliers
+
+# Count number of listings per price point and neighborhood
+df_price_plot = df_price_plot.groupby(['price', 'host_neighbourhood']).size().reset_index(name='listing_count')
+
+# Define selection
+highlight = alt.selection_point(fields=['host_neighbourhood'], bind='legend')
+
+# Scatter plot
+scatter = alt.Chart(df_price_plot).mark_circle(size=60).encode(
+    x=alt.X('price:Q', title='Price (USD)'),
+    y=alt.Y('listing_count:Q', title='Number of Listings'),
+    color=alt.Color('host_neighbourhood:N', title='Neighborhood'),
+    tooltip=['host_neighbourhood', 'price', 'listing_count'],
+    opacity=alt.condition(highlight, alt.value(1), alt.value(0.2))
+).add_params(
+    highlight
+).properties(
+    width=700,
+    height=400,
+    title='Listings by Price and Neighborhood'
+).interactive()  # Enables zoom and pan
+
+st.altair_chart(scatter, use_container_width=True)
