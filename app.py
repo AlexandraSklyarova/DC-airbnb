@@ -23,7 +23,7 @@ df['estimated_revenue_365d'] = df['price'] * df['availability_365']
 df['host_year'] = df['host_since'].dt.year
 
 # Title
-st.title("🏠 DC Airbnb Data Explorer")
+st.title("DC Airbnb Data Explorer")
 
 # --- User Controls ---
 st.sidebar.header("Filters")
@@ -42,7 +42,7 @@ agg_func = 'mean' if metric == "Average Revenue" else 'sum'
 agg_col = 'avg_estimated_revenue' if metric == "Average Revenue" else 'total_estimated_revenue'
 
 # --- Revenue Bar Chart ---
-st.header("📊 Revenue by Neighborhood")
+st.header("Revenue by Neighborhood")
 df_grouped = df_filtered.groupby('host_neighbourhood', as_index=False).agg(
     {'estimated_revenue_365d': agg_func}
 ).rename(columns={'estimated_revenue_365d': agg_col})
@@ -82,12 +82,13 @@ bubble_chart = alt.Chart(df_bubble).mark_circle().encode(
 st.altair_chart(bubble_chart, use_container_width=True)
 
 # --- Scatter Plot: Price vs Listings ---
-st.header("💵 Price vs Number of Listings")
+st.header("Price vs Number of Listings")
 df_price_plot = df_filtered[df_filtered['price'] < 1000][['host_neighbourhood', 'price']].copy()
 df_price_plot = df_price_plot.groupby(['price', 'host_neighbourhood']).size().reset_index(name='listing_count')
 
-highlight = alt.selection_point(fields=['host_neighbourhood'], bind='legend', name="Neighborhood Highlight")
+highlight = alt.selection_point(fields=['host_neighbourhood'], nearest=True, on='click', clear='mouseout')
 
+# --- Updated Scatter Chart with selection on click ---
 scatter_chart = alt.Chart(df_price_plot).mark_circle(size=60).encode(
     x=alt.X('price:Q', title='Price (USD)'),
     y=alt.Y('listing_count:Q', title='Number of Listings'),
@@ -104,11 +105,7 @@ scatter_chart = alt.Chart(df_price_plot).mark_circle(size=60).encode(
 
 st.altair_chart(scatter_chart, use_container_width=True)
 
-# --- Linked Chart: Review Scores Strip Plot ---
-st.header("⭐ Review Scores by Host Year and Superhost")
-df_reviews = df_filtered[['host_year', 'review_scores_rating', 'host_is_superhost', 'host_neighbourhood']]
-df_reviews = df_reviews[df_reviews['review_scores_rating'].between(0, 100)]
-
+# --- Updated Strip Chart linked to same selection ---
 strip_chart = alt.Chart(df_reviews).mark_tick(thickness=2, size=12).encode(
     x=alt.X('host_year:O', title='Host Since (Year)'),
     y=alt.Y('review_scores_rating:Q', title='Review Score Rating'),
