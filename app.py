@@ -66,9 +66,8 @@ with col1:
     # Spacer between charts
     st.markdown("###")
 
-   st.header("🛏️ Room Types: Beds, Baths, Accommodates")
+    st.header("🛏️ Room Types: Beds, Baths, Accommodates")
 
-# Create chart
     bubble_chart = alt.Chart(df).mark_circle().encode(
         x=alt.X('room_type:N', title='Room Type'),
         y=alt.Y('accommodates:Q', title='Accommodates'),
@@ -81,8 +80,7 @@ with col1:
         title='Beds, Bathrooms, Room Type vs Accommodates'
     )
 
-st.altair_chart(bubble_chart, use_container_width=True)
-
+    st.altair_chart(bubble_chart, use_container_width=True)
 
 with col2:
     st.header("💵 Price vs Number of Listings")
