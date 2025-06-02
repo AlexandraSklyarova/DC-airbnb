@@ -62,7 +62,7 @@ bar_chart = alt.Chart(df_grouped).mark_bar().encode(
 st.altair_chart(bar_chart, use_container_width=True)
 
 # --- Bubble Chart ---
-st.header("🛏️ Room Types: Beds, Baths, Accommodates")
+st.header("Room Types: Beds, Baths, Accommodates")
 room_types = df_filtered['room_type'].unique().tolist()
 selected_room_types = st.multiselect("Select room types:", options=room_types, default=room_types)
 df_bubble = df_filtered[df_filtered['room_type'].isin(selected_room_types)]
@@ -106,7 +106,7 @@ scatter_chart = alt.Chart(df_price_plot).mark_circle(size=60).encode(
 ).properties(
     width=900,
     height=500,
-    title='Listings by Price and Neighborhood'
+    title='Listings by Price and Neighborhood (Click on Mark to See Neighborhood Filter. Double Click to Deselct All)'
 ).interactive()
 
 st.altair_chart(scatter_chart, use_container_width=True)
@@ -114,7 +114,7 @@ st.altair_chart(scatter_chart, use_container_width=True)
 # --- Updated Strip Chart Linked to Same Selection ---
 strip_chart = alt.Chart(df_filtered).mark_tick(thickness=2, size=12).encode(
     x=alt.X('host_year:O', title='Host Since (Year)'),
-    y=alt.Y('review_scores_rating:Q', title='Review Score Rating'),
+    y=alt.Y('review_scores_rating:Q', title='Review Score Rating (Click on Mark to See Neighborhood Filter. Double Click to Deselct All)'),
     color=alt.Color('host_is_superhost:N',
                     title='Superhost',
                     scale=alt.Scale(domain=['t', 'f'],
