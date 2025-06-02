@@ -69,17 +69,17 @@ with col1:
    st.header("🛏️ Room Types: Beds, Baths, Accommodates")
 
 # Create chart
-bubble_chart = alt.Chart(df).mark_circle().encode(
-    x=alt.X('room_type:N', title='Room Type'),
-    y=alt.Y('accommodates:Q', title='Accommodates'),
-    size=alt.Size('beds:Q', title='Beds'),
-    color=alt.Color('bathrooms:Q', title='Bathrooms', scale=alt.Scale(scheme='blues')),
-    tooltip=['room_type', 'accommodates', 'beds', 'bathrooms']
-).properties(
-    width=900,
-    height=600,
-    title='Beds, Bathrooms, Room Type vs Accommodates'
-)
+    bubble_chart = alt.Chart(df).mark_circle().encode(
+        x=alt.X('room_type:N', title='Room Type'),
+        y=alt.Y('accommodates:Q', title='Accommodates'),
+        size=alt.Size('beds:Q', title='Beds'),
+        color=alt.Color('bathrooms:Q', title='Bathrooms', scale=alt.Scale(scheme='blues')),
+        tooltip=['room_type', 'accommodates', 'beds', 'bathrooms']
+    ).properties(
+        width=900,
+        height=600,
+        title='Beds, Bathrooms, Room Type vs Accommodates'
+    )
 
 st.altair_chart(bubble_chart, use_container_width=True)
 
