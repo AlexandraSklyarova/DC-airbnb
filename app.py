@@ -22,16 +22,11 @@ df = df.dropna()
 df['estimated_revenue_365d'] = df['price'] * df['availability_365']
 df['host_year'] = df['host_since'].dt.year
 
-# Title
+# --- Title ---
 st.title("DC Airbnb Data Explorer")
 
-# --- User Controls ---
-# --- User Controls ---
+# --- Sidebar Filters ---
 st.sidebar.header("Filters")
-metric = st.sidebar.selectbox(
-    "Select metric (For Metric by Neighborhood Chart):",
-    options=["Average Revenue", "Total Revenue", "Average Price", "Total Listings"]
-)
 top_n = st.sidebar.slider("Select number of neighborhoods to display:", min_value=5, max_value=100, value=30)
 
 # Neighborhood filter
@@ -44,6 +39,13 @@ selected_neighborhoods = st.sidebar.multiselect(
 
 # Filter dataset
 df_filtered = df[df['host_neighbourhood'].isin(selected_neighborhoods)]
+
+# --- Metric Selection (Above Bar Chart) ---
+st.subheader("Metric by Neighborhood")
+metric = st.selectbox(
+    "Select metric:",
+    options=["Average Revenue", "Total Revenue", "Average Price", "Total Listings"]
+)
 
 # Determine aggregation
 if metric == "Average Revenue":
@@ -69,7 +71,6 @@ elif metric == "Total Listings":
     df_grouped = df_filtered.groupby('host_neighbourhood').size().reset_index(name=agg_col)
 
 # --- Bar Chart ---
-st.header("Metric by Neighborhood")
 bar_chart = alt.Chart(df_grouped).mark_bar().encode(
     x=alt.X('host_neighbourhood:N', sort='-y', title='Host Neighborhood'),
     y=alt.Y(f'{agg_col}:Q', title=metric),
@@ -83,7 +84,6 @@ bar_chart = alt.Chart(df_grouped).mark_bar().encode(
 )
 
 st.altair_chart(bar_chart, use_container_width=True)
-
 
 # --- Bubble Chart ---
 st.header("Room Types: Beds, Baths, Accommodates")
@@ -108,7 +108,6 @@ st.altair_chart(bubble_chart, use_container_width=True)
 # --- Scatter Plot: Price vs Availability ---
 st.header("Price vs Availability")
 
-# Filter for reasonable price range
 df_price_plot = df_filtered[df_filtered['price'] < 1000][['host_neighbourhood', 'price', 'availability_365']].copy()
 
 # Selection that toggles on click (not mouseout)
@@ -119,7 +118,6 @@ highlight = alt.selection_point(
     on="click"
 )
 
-# --- Updated Scatter Plot ---
 scatter_chart = alt.Chart(df_price_plot).mark_circle(size=60).encode(
     x=alt.X('price:Q', title='Price (USD)'),
     y=alt.Y('availability_365:Q', title='Availability (Days per Year)'),
@@ -157,4 +155,3 @@ strip_chart = alt.Chart(df_filtered).mark_tick(thickness=2, size=12).encode(
 )
 
 st.altair_chart(strip_chart, use_container_width=True)
-
