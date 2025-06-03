@@ -29,7 +29,7 @@ st.title("DC Airbnb Data Explorer")
 # --- User Controls ---
 st.sidebar.header("Filters")
 metric = st.sidebar.selectbox(
-    "Select metric:",
+    "Select metric (For Metric by Neighborhood Chart):",
     options=["Average Revenue", "Total Revenue", "Average Price", "Total Listings"]
 )
 top_n = st.sidebar.slider("Select number of neighborhoods to display:", min_value=5, max_value=100, value=30)
