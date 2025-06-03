@@ -105,10 +105,11 @@ bubble_chart = alt.Chart(df_bubble).mark_circle().encode(
 
 st.altair_chart(bubble_chart, use_container_width=True)
 
-# --- Scatter Plot: Price vs Listings ---
-st.header("Price vs Number of Listings")
-df_price_plot = df_filtered[df_filtered['price'] < 1000][['host_neighbourhood', 'price']].copy()
-df_price_plot = df_price_plot.groupby(['price', 'host_neighbourhood']).size().reset_index(name='listing_count')
+# --- Scatter Plot: Price vs Availability ---
+st.header("Price vs Availability")
+
+# Filter for reasonable price range
+df_price_plot = df_filtered[df_filtered['price'] < 1000][['host_neighbourhood', 'price', 'availability_365']].copy()
 
 # Selection that toggles on click (not mouseout)
 highlight = alt.selection_point(
@@ -121,21 +122,23 @@ highlight = alt.selection_point(
 # --- Updated Scatter Plot ---
 scatter_chart = alt.Chart(df_price_plot).mark_circle(size=60).encode(
     x=alt.X('price:Q', title='Price (USD)'),
-    y=alt.Y('listing_count:Q', title='Number of Listings'),
+    y=alt.Y('availability_365:Q', title='Availability (Days per Year)'),
     color=alt.Color('host_neighbourhood:N', title='Neighborhood'),
-    tooltip=['host_neighbourhood', 'price', 'listing_count'],
+    tooltip=['host_neighbourhood', 'price', 'availability_365'],
     opacity=alt.condition(highlight, alt.value(1), alt.value(0.2))
 ).add_params(
     highlight
 ).properties(
     width=900,
     height=500,
-    title='Listings by Price and Neighborhood (Click on Mark to See Neighborhood Filter. Double Click to Deselect All)'
+    title='Availability vs Price by Neighborhood (Click to Filter Neighborhoods)'
 ).interactive()
 
 st.altair_chart(scatter_chart, use_container_width=True)
 
-# --- Updated Strip Chart Linked to Same Selection ---
+# --- Linked Strip Chart ---
+st.header("Review Scores by Host Year and Superhost Status")
+
 strip_chart = alt.Chart(df_filtered).mark_tick(thickness=2, size=12).encode(
     x=alt.X('host_year:O', title='Host Since (Year)'),
     y=alt.Y('review_scores_rating:Q', title='Review Score Rating'),
@@ -150,7 +153,8 @@ strip_chart = alt.Chart(df_filtered).mark_tick(thickness=2, size=12).encode(
 ).properties(
     width=900,
     height=500,
-    title='Review Scores by Host Year and Superhost Status (Click on Mark to See Neighborhood Filter. Double Click to Deselect All)'
+    title='Review Scores by Host Year and Superhost Status (Click to Filter by Neighborhood)'
 )
 
 st.altair_chart(strip_chart, use_container_width=True)
+
