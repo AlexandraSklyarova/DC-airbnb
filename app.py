@@ -66,7 +66,7 @@ elif metric == "Average Price":
 
 elif metric == "Total Listings":
     agg_col = "total_listings"
-    df_grouped = df_filtered.groupby('host_neighbourhood', as_index=False).size().reset_index(name=agg_col)
+    df_grouped = df_filtered.groupby('host_neighbourhood').size().reset_index(name=agg_col)
 
 # --- Bar Chart ---
 st.header("Metric by Neighborhood")
