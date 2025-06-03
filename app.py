@@ -26,30 +26,53 @@ df['host_year'] = df['host_since'].dt.year
 st.title("DC Airbnb Data Explorer")
 
 # --- User Controls ---
+# --- User Controls ---
 st.sidebar.header("Filters")
-metric = st.sidebar.selectbox("Select revenue metric:", options=["Average Revenue", "Total Revenue"])
+metric = st.sidebar.selectbox(
+    "Select metric:",
+    options=["Average Revenue", "Total Revenue", "Average Price", "Total Listings"]
+)
 top_n = st.sidebar.slider("Select number of neighborhoods to display:", min_value=5, max_value=100, value=30)
 
 # Neighborhood filter
 top_neighborhoods = df['host_neighbourhood'].value_counts().nlargest(top_n).index.tolist()
-selected_neighborhoods = st.sidebar.multiselect("Filter neighborhoods: (optional)", options=top_neighborhoods, default=top_neighborhoods)
+selected_neighborhoods = st.sidebar.multiselect(
+    "Filter neighborhoods: (optional)",
+    options=top_neighborhoods,
+    default=top_neighborhoods
+)
 
 # Filter dataset
 df_filtered = df[df['host_neighbourhood'].isin(selected_neighborhoods)]
 
 # Determine aggregation
-agg_func = 'mean' if metric == "Average Revenue" else 'sum'
-agg_col = 'avg_estimated_revenue' if metric == "Average Revenue" else 'total_estimated_revenue'
+if metric == "Average Revenue":
+    agg_col = "avg_estimated_revenue"
+    df_grouped = df_filtered.groupby('host_neighbourhood', as_index=False).agg(
+        { 'estimated_revenue_365d': 'mean' }
+    ).rename(columns={'estimated_revenue_365d': agg_col})
 
-# --- Revenue Bar Chart ---
-st.header("Revenue by Neighborhood")
-df_grouped = df_filtered.groupby('host_neighbourhood', as_index=False).agg(
-    {'estimated_revenue_365d': agg_func}
-).rename(columns={'estimated_revenue_365d': agg_col})
+elif metric == "Total Revenue":
+    agg_col = "total_estimated_revenue"
+    df_grouped = df_filtered.groupby('host_neighbourhood', as_index=False).agg(
+        { 'estimated_revenue_365d': 'sum' }
+    ).rename(columns={'estimated_revenue_365d': agg_col})
 
+elif metric == "Average Price":
+    agg_col = "avg_price"
+    df_grouped = df_filtered.groupby('host_neighbourhood', as_index=False).agg(
+        { 'price': 'mean' }
+    ).rename(columns={'price': agg_col})
+
+elif metric == "Total Listings":
+    agg_col = "total_listings"
+    df_grouped = df_filtered.groupby('host_neighbourhood', as_index=False).size().reset_index(name=agg_col)
+
+# --- Bar Chart ---
+st.header("Metric by Neighborhood")
 bar_chart = alt.Chart(df_grouped).mark_bar().encode(
     x=alt.X('host_neighbourhood:N', sort='-y', title='Host Neighborhood'),
-    y=alt.Y(f'{agg_col}:Q', title=f'{metric} (365d)'),
+    y=alt.Y(f'{agg_col}:Q', title=metric),
     tooltip=['host_neighbourhood', f'{agg_col}']
 ).properties(
     width=900,
@@ -60,6 +83,7 @@ bar_chart = alt.Chart(df_grouped).mark_bar().encode(
 )
 
 st.altair_chart(bar_chart, use_container_width=True)
+
 
 # --- Bubble Chart ---
 st.header("Room Types: Beds, Baths, Accommodates")
