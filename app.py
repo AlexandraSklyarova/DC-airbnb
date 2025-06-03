@@ -125,7 +125,7 @@ scatter_chart = alt.Chart(df_price_plot).mark_circle(size=60).encode(
     y=alt.Y('availability_365:Q', title='Availability (Days per Year)'),
     color=alt.Color('host_neighbourhood:N', title='Neighborhood'),
     tooltip=['host_neighbourhood', 'price', 'availability_365'],
-    opacity=alt.condition(highlight, alt.value(1), alt.value(0.2))
+    opacity=alt.condition(highlight, alt.value(1), alt.value(0.75))
 ).add_params(
     highlight
 ).properties(
@@ -147,7 +147,7 @@ strip_chart = alt.Chart(df_filtered).mark_tick(thickness=2, size=12).encode(
                     scale=alt.Scale(domain=['t', 'f'],
                                     range=['lightgreen', 'lightcoral'])),
     tooltip=['host_year', 'review_scores_rating', 'host_is_superhost', 'host_neighbourhood'],
-    opacity=alt.condition(highlight, alt.value(1), alt.value(0.1))
+    opacity=alt.condition(highlight, alt.value(1), alt.value(0.75))
 ).add_params(
     highlight
 ).properties(
