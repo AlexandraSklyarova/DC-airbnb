@@ -1,6 +1,9 @@
-import streamlit as st
 import pandas as pd
+import numpy as np
 import altair as alt
+import streamlit as st
+import plotly.express as px
+import circlify
 
 # Set page layout to wide
 st.set_page_config(layout="wide")
@@ -155,3 +158,114 @@ strip_chart = alt.Chart(df_filtered).mark_tick(thickness=2, size=12).encode(
 )
 
 st.altair_chart(strip_chart, use_container_width=True)
+
+
+
+
+
+
+df.columns = df.columns.str.strip()
+df = df.rename(columns={"Average ⬆️": "Average"})
+df["CO₂ cost (kg)"] = pd.to_numeric(df["CO₂ cost (kg)"], errors="coerce")
+df["Upload To Hub Date"] = pd.to_datetime(df["Upload To Hub Date"], errors="coerce")
+df = df.dropna(subset=["CO₂ cost (kg)", "Upload To Hub Date", "Type"])
+
+# --- Use CO₂ as radius directly ---
+grouped = df.groupby("Type", as_index=False)["CO₂ cost (kg)"].mean()
+
+angle_step = 2 * np.pi / len(grouped)
+radius = 750  # adjust for spacing
+
+layout_df = grouped.copy()
+layout_df["angle"] = [i * angle_step for i in range(len(grouped))]
+layout_df["x"] = np.cos(layout_df["angle"]) * radius
+layout_df["y"] = np.sin(layout_df["angle"]) * radius
+
+layout_df["r"] = layout_df["CO₂ cost (kg)"]
+layout_df["Size"] = (layout_df["r"] ** 2) * np.pi
+layout_df["CO₂ Rounded"] = layout_df["r"].round(1)
+
+# Circlify layout using CO₂ directly
+circles = circlify.circlify(
+    grouped["CO₂ cost (kg)"].tolist(),
+    show_enclosure=False,
+    target_enclosure=circlify.Circle(x=0, y=0, r=1)
+)
+
+# Position and size bubbles
+layout_df = pd.DataFrame([{
+    "x": c.x * grouped.iloc[i]["CO₂ cost (kg)"] * 1.5 * 50,  # x scaled to radius
+    "y": c.y * grouped.iloc[i]["CO₂ cost (kg)"] * 1.5 * 50,  # y scaled to radius
+    "r": grouped.iloc[i]["CO₂ cost (kg)"],
+    "Type": grouped.iloc[i]["Type"],
+    "CO₂ cost (kg)": grouped.iloc[i]["CO₂ cost (kg)"]
+} for i, c in enumerate(circles)])
+
+
+# Size = π × r², to match Altair's area encoding
+layout_df["Size"] = layout_df["r"] ** 2 * np.pi
+layout_df["CO₂ Rounded"] = layout_df["CO₂ cost (kg)"].round(1)
+
+# Shared selection
+type_selection = alt.selection_point(fields=["Type"], bind="legend")
+
+# --- Bubble chart ---
+bubbles = alt.Chart(layout_df).mark_circle(opacity=0.85).encode(
+    x=alt.X("x:Q", axis=None),
+    y=alt.Y("y:Q", axis=None),
+    size=alt.Size("Size:Q", scale=alt.Scale(range=[300, 20000]), legend=None),
+    color=alt.Color("Type:N", legend=alt.Legend(title="Model Type")),
+    opacity=alt.condition(type_selection, alt.value(1.0), alt.value(0.2)),
+    tooltip=["Type:N", "CO₂ cost (kg):Q"]
+).add_params(type_selection).properties(
+    title="Average CO₂ Output per Model Type (Radius = CO₂ Cost (kg))",
+    width=800,
+    height=650
+)
+
+labels = alt.Chart(layout_df).mark_text(
+    fontSize=13,
+    fontWeight="bold",
+    color="black"
+).encode(
+    x="x:Q",
+    y="y:Q",
+    text="CO₂ Rounded:Q",
+    opacity=alt.condition(type_selection, alt.value(1.0), alt.value(0.3))
+)
+
+bubble_chart = bubbles + labels
+
+# --- Area chart data ---
+df["Month"] = df["Upload To Hub Date"].dt.to_period("M").dt.to_timestamp()
+monthly = df.groupby(["Month", "Type"])["CO₂ cost (kg)"].sum().reset_index()
+monthly["Cumulative CO₂"] = monthly.sort_values("Month").groupby("Type")["CO₂ cost (kg)"].cumsum()
+
+# --- Area chart ---
+zoom = alt.selection_interval(bind="scales")
+
+# --- Area chart with zoom + month-year x-axis formatting ---
+area_chart = alt.Chart(monthly).mark_area(interpolate="monotone").encode(
+    x=alt.X("Month:T", title="Month", axis=alt.Axis(format="%b %Y")),
+    y=alt.Y("Cumulative CO₂:Q", title="Cumulative CO₂ Emissions (kg)", stack="zero"),
+    color=alt.Color("Type:N", legend=None),
+    opacity=alt.condition(type_selection, alt.value(1.0), alt.value(0.1)),
+    tooltip=[
+        alt.Tooltip("Month:T", title="Month", format="%B %Y"),
+        alt.Tooltip("Type:N"),
+        alt.Tooltip("Cumulative CO₂:Q", format=",.0f")
+    ]
+).add_params(type_selection, zoom).properties(
+    title="Cumulative CO₂ Emissions Over Time (Zoom Enabled)",
+    width=800,
+    height=400
+)
+
+# --- Combine vertically ---
+combined_chart = alt.vconcat(
+    bubble_chart,
+    area_chart
+).resolve_legend(color="shared")
+
+# --- Show in Streamlit ---
+st.altair_chart(combined_chart, use_container_width=True)
