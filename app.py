@@ -200,12 +200,13 @@ circles = circlify.circlify(
 
 # Position and size bubbles
 layout_df = pd.DataFrame([{
-    "x": c.x * 500,  # scale layout uniformly, e.g. by 500
-    "y": c.y * 500,
-    "r": c.r * 500,  # scale radius the same way
+    "x": c.x * grouped.iloc[i]["CO₂ cost (kg)"] * 1.5 * 50,
+    "y": c.y * grouped.iloc[i]["CO₂ cost (kg)"] * 1.5 * 50,
+    "r": grouped.iloc[i]["CO₂ cost (kg)"],
     "Type": grouped.iloc[i]["Type"],
     "CO₂ cost (kg)": grouped.iloc[i]["CO₂ cost (kg)"]
 } for i, c in enumerate(circles)])
+
 
 
 
@@ -228,6 +229,10 @@ bubbles = alt.Chart(layout_df).mark_circle(opacity=0.85).encode(
     title="Average CO₂ Output per Model Type (Radius = CO₂ Cost (kg))",
     width=800,
     height=650
+).configure_view(
+    stroke= None
+).configure_padding(
+    innerRadius=0
 )
 
 labels = alt.Chart(layout_df).mark_text(
