@@ -200,12 +200,13 @@ circles = circlify.circlify(
 
 # Position and size bubbles
 layout_df = pd.DataFrame([{
-    "x": c.x * grouped.iloc[i]["CO₂ cost (kg)"] * 1.5 * 50,  # x scaled to radius
-    "y": c.y * grouped.iloc[i]["CO₂ cost (kg)"] * 1.5 * 50,  # y scaled to radius
-    "r": grouped.iloc[i]["CO₂ cost (kg)"],
+    "x": c.x * 500,  # scale layout uniformly, e.g. by 500
+    "y": c.y * 500,
+    "r": c.r * 500,  # scale radius the same way
     "Type": grouped.iloc[i]["Type"],
     "CO₂ cost (kg)": grouped.iloc[i]["CO₂ cost (kg)"]
 } for i, c in enumerate(circles)])
+
 
 
 # Size = π × r², to match Altair's area encoding
