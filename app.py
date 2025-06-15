@@ -183,24 +183,27 @@ df = df.dropna(subset=["CO₂ cost (kg)", "Upload To Hub Date", "Type"])
 unique_types = df["Type"].unique().tolist()
 selected_type = st.selectbox("Highlight a Model Type", ["All"] + unique_types)
 
-# --- Group by Type for bubble chart ---
+# --- Group and transform data for bubbles ---
 grouped = df.groupby("Type", as_index=False)["CO₂ cost (kg)"].mean()
 grouped = grouped.sort_values("CO₂ cost (kg)", ascending=False).reset_index(drop=True)
-values = grouped["CO₂ cost (kg)"].tolist()
+
+# 🟡 Make radius ∝ CO₂ by passing sqrt(CO₂) to circlify
+grouped["CO₂ sqrt"] = np.sqrt(grouped["CO₂ cost (kg)"])
+values_for_circlify = grouped["CO₂ sqrt"].tolist()
 type_list = grouped["Type"].tolist()
 
-# --- Color palette (match Altair and Matplotlib) ---
+# --- Color palette (shared between Altair and Matplotlib) ---
 cmap = cm.get_cmap("tab20", len(type_list))
 type_colors = {t: to_hex(cmap(i)) for i, t in enumerate(type_list)}
 
-# --- Circlify layout (area ∝ CO₂) ---
+# --- Generate packed layout ---
 circles = circlify.circlify(
-    values,
+    values_for_circlify,
     show_enclosure=False,
     target_enclosure=circlify.Circle(x=0, y=0, r=1)
 )
 
-# --- Matplotlib bubble chart ---
+# --- Draw matplotlib bubble chart ---
 fig, ax = plt.subplots(figsize=(10, 10))
 ax.axis('off')
 lim = max(max(abs(c.x) + c.r, abs(c.y) + c.r) for c in circles)
@@ -209,7 +212,7 @@ plt.ylim(-lim, lim)
 
 for circle, row in zip(circles, grouped.itertuples()):
     x, y, r = circle.x, circle.y, circle.r
-    value = row._2  # CO₂ cost (kg)
+    value = row._2  # actual CO₂
     label = f"{row.Type}\n{value:,.0f}"
     facecolor = type_colors[row.Type]
     edgecolor = 'black' if selected_type in ["All", row.Type] else 'gray'
@@ -218,10 +221,11 @@ for circle, row in zip(circles, grouped.itertuples()):
     if selected_type in ["All", row.Type]:
         ax.text(x, y, label, ha='center', va='center', fontsize=10)
 
+# Save chart to memory and show
 buf = BytesIO()
 plt.savefig(buf, format="png", bbox_inches='tight', dpi=200)
 buf.seek(0)
-st.image(buf, caption="Packed Bubble Chart: Avg CO₂ Cost per Model Type", use_column_width=True)
+st.image(buf, caption="Packed Bubble Chart (Radius ∝ CO₂ Cost)", use_column_width=True)
 
 # --- Time series data for Altair chart ---
 df["Month"] = df["Upload To Hub Date"].dt.to_period("M").dt.to_timestamp()
