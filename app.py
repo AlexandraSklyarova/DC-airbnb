@@ -5,6 +5,8 @@ import streamlit as st
 import plotly.express as px
 import circlify
 
+
+
 # Set page layout to wide
 st.set_page_config(layout="wide")
 
@@ -161,6 +163,10 @@ st.altair_chart(strip_chart, use_container_width=True)
 
 
 
+
+
+
+df = pd.read_csv("open-llm-leaderboards.csv")
 
 
 
