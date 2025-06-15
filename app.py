@@ -178,39 +178,27 @@ df = df.dropna(subset=["CO₂ cost (kg)", "Upload To Hub Date", "Type"])
 
 # --- Use CO₂ as radius directly ---
 grouped = df.groupby("Type", as_index=False)["CO₂ cost (kg)"].mean()
+grouped = grouped.sort_values("CO₂ cost (kg)", ascending=False)
 
-angle_step = 2 * np.pi / len(grouped)
-radius = 750  # adjust for spacing
-
-layout_df = grouped.copy()
-layout_df["angle"] = [i * angle_step for i in range(len(grouped))]
-layout_df["x"] = np.cos(layout_df["angle"]) * radius
-layout_df["y"] = np.sin(layout_df["angle"]) * radius
-
-layout_df["r"] = layout_df["CO₂ cost (kg)"]
-layout_df["Size"] = (layout_df["r"] ** 2) * np.pi
-layout_df["CO₂ Rounded"] = layout_df["r"].round(1)
-
-# Circlify layout using CO₂ directly
+# Circlify
 circles = circlify.circlify(
     grouped["CO₂ cost (kg)"].tolist(),
     show_enclosure=False,
     target_enclosure=circlify.Circle(x=0, y=0, r=1)
 )
 
-# Position and size bubbles
+# Scale up for better visuals
+scale = 400  # adjust for chart size
 layout_df = pd.DataFrame([{
-    "x": c.x * grouped.iloc[i]["CO₂ cost (kg)"] * 1.5 * 50,
-    "y": c.y * grouped.iloc[i]["CO₂ cost (kg)"] * 1.5 * 50,
-    "r": grouped.iloc[i]["CO₂ cost (kg)"],
+    "x": circle.x * scale,
+    "y": circle.y * scale,
+    "r": circle.r * scale,
     "Type": grouped.iloc[i]["Type"],
-    "CO₂ cost (kg)": grouped.iloc[i]["CO₂ cost (kg)"]
-} for i, c in enumerate(circles)])
+    "CO₂ cost (kg)": grouped.iloc[i]["CO₂ cost (kg)"],
+    "CO₂ Rounded": round(grouped.iloc[i]["CO₂ cost (kg)"], 1)
+} for i, circle in enumerate(circles)])
 
-
-
-
-# Size = π × r², to match Altair's area encoding
+# Add Altair size (area)
 layout_df["Size"] = layout_df["r"] ** 2 * np.pi
 layout_df["CO₂ Rounded"] = layout_df["CO₂ cost (kg)"].round(1)
 
@@ -229,10 +217,6 @@ bubbles = alt.Chart(layout_df).mark_circle(opacity=0.85).encode(
     title="Average CO₂ Output per Model Type (Radius = CO₂ Cost (kg))",
     width=800,
     height=650
-).configure_view(
-    stroke= None
-).configure_padding(
-    innerRadius=0
 )
 
 labels = alt.Chart(layout_df).mark_text(
