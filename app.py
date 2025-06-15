@@ -174,33 +174,32 @@ df = pd.read_csv("open-llm-leaderboards.csv")
 
 
 df.columns = df.columns.str.strip()
-df = df.rename(columns={"Average ⬆️": "Average"})
-df["CO₂ cost (kg)"] = pd.to_numeric(df["CO₂ cost (kg)"], errors="coerce")
 df["Upload To Hub Date"] = pd.to_datetime(df["Upload To Hub Date"], errors="coerce")
-df = df.dropna(subset=["CO₂ cost (kg)", "Upload To Hub Date", "Type"])
+df = df.dropna(subset=["Upload To Hub Date", "Type"])
 
-# --- Sidebar: filter selection ---
+# --- Sidebar: selection ---
 unique_types = df["Type"].unique().tolist()
 selected_type = st.selectbox("Highlight a Model Type", ["All"] + unique_types)
 
-# --- Group for bubble chart ---
-grouped = df.groupby("Type", as_index=False)["CO₂ cost (kg)"].mean()
-grouped = grouped.sort_values("CO₂ cost (kg)", ascending=False).reset_index(drop=True)
-values_for_circlify = grouped["CO₂ cost (kg)"].tolist()
+# --- Group by count (number of models per type)
+grouped = df.groupby("Type", as_index=False).size().rename(columns={"size": "Count"})
+grouped = grouped.sort_values("Count", ascending=False).reset_index(drop=True)
+
+values = grouped["Count"].tolist()
 type_list = grouped["Type"].tolist()
 
-# --- Color mapping (shared between charts) ---
+# --- Color mapping
 cmap = cm.get_cmap("tab20", len(type_list))
 type_colors = {t: to_hex(cmap(i)) for i, t in enumerate(type_list)}
 
-# --- Generate packed layout (area ∝ CO₂ value) ---
+# --- Circlify layout (area ∝ count)
 circles = circlify.circlify(
-    values_for_circlify,
+    values,
     show_enclosure=False,
     target_enclosure=circlify.Circle(x=0, y=0, r=1)
 )
 
-# --- Draw matplotlib bubble chart ---
+# --- Bubble chart (matplotlib)
 fig, ax = plt.subplots(figsize=(10, 10))
 ax.axis('off')
 lim = max(max(abs(c.x) + c.r, abs(c.y) + c.r) for c in circles)
@@ -209,8 +208,7 @@ plt.ylim(-lim, lim)
 
 for circle, row in zip(circles, grouped.itertuples()):
     x, y, r = circle.x, circle.y, circle.r
-    value = row._2  # CO₂ value
-    label = f"{row.Type}\n{value:,.0f}"
+    label = f"{row.Type}\n{row.Count}"
     facecolor = type_colors[row.Type]
     edgecolor = 'black' if selected_type in ["All", row.Type] else 'gray'
     alpha = 1.0 if selected_type in ["All", row.Type] else 0.1
@@ -218,21 +216,21 @@ for circle, row in zip(circles, grouped.itertuples()):
     if selected_type in ["All", row.Type]:
         ax.text(x, y, label, ha='center', va='center', fontsize=10)
 
-# Save image to buffer
 buf = BytesIO()
 plt.savefig(buf, format="png", bbox_inches='tight', dpi=200)
 buf.seek(0)
-st.image(buf, caption="Packed Bubble Chart (Area ∝ CO₂)", use_column_width=True)
+st.image(buf, caption="Packed Bubble Chart (Model Count per Type)", use_column_width=True)
 
-# --- Altair area chart setup ---
+# --- Time series chart (still uses CO₂)
 df["Month"] = df["Upload To Hub Date"].dt.to_period("M").dt.to_timestamp()
+df["CO₂ cost (kg)"] = pd.to_numeric(df["CO₂ cost (kg)"], errors="coerce")
+df = df.dropna(subset=["CO₂ cost (kg)"])
 monthly = df.groupby(["Month", "Type"])["CO₂ cost (kg)"].sum().reset_index()
 monthly["Cumulative CO₂"] = monthly.sort_values("Month").groupby("Type")["CO₂ cost (kg)"].cumsum()
 
 if selected_type != "All":
     monthly = monthly[monthly["Type"] == selected_type]
 
-# --- Color scale for Altair
 color_scale = alt.Scale(domain=type_list, range=[type_colors[t] for t in type_list])
 zoom = alt.selection_interval(bind="scales")
 
