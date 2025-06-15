@@ -177,64 +177,72 @@ df["CO₂ cost (kg)"] = pd.to_numeric(df["CO₂ cost (kg)"], errors="coerce")
 df["Upload To Hub Date"] = pd.to_datetime(df["Upload To Hub Date"], errors="coerce")
 df = df.dropna(subset=["CO₂ cost (kg)", "Upload To Hub Date", "Type"])
 
-# --- Group for bubble chart ---
+# --- Sidebar: User Filter ---
+unique_types = df["Type"].unique().tolist()
+selected_type = st.selectbox("Select a Model Type to Highlight", ["All"] + unique_types)
+
+# --- Grouped for Bubble Chart ---
 grouped = df.groupby("Type", as_index=False)["CO₂ cost (kg)"].mean()
 grouped = grouped.sort_values("CO₂ cost (kg)", ascending=False).reset_index(drop=True)
 
-# --- Circlify for bubble positions ---
+# --- Circlify Layout ---
 circles = circlify.circlify(
     grouped["CO₂ cost (kg)"].tolist(),
     show_enclosure=False,
     target_enclosure=circlify.Circle(x=0, y=0, r=1)
 )
 
-# --- Plot with Matplotlib ---
+# --- Draw Bubble Chart with Matplotlib ---
 fig, ax = plt.subplots(figsize=(10, 10))
 ax.axis('off')
 lim = max(max(abs(c.x) + c.r, abs(c.y) + c.r) for c in circles)
 plt.xlim(-lim, lim)
 plt.ylim(-lim, lim)
 
-# Color palette
+# Define consistent colors
 colors = plt.cm.tab20.colors
 type_colors = {t: colors[i % len(colors)] for i, t in enumerate(grouped["Type"])}
 
-# Draw bubbles
+# Draw Circles
 for circle, row in zip(circles, grouped.itertuples()):
     x, y, r = circle.x, circle.y, circle.r
-    label = f"{row.Type}\n{row._2:,.0f}"  # _2 is CO₂ cost from namedtuple
-    ax.add_patch(plt.Circle((x, y), r, alpha=0.6, linewidth=2, color=type_colors[row.Type]))
-    ax.text(x, y, label, ha='center', va='center', fontsize=10)
+    label = f"{row.Type}\n{row._2:,.0f}"
+    facecolor = type_colors[row.Type]
+    edgecolor = 'black' if selected_type in ["All", row.Type] else 'gray'
+    alpha = 1.0 if selected_type in ["All", row.Type] else 0.1
+    ax.add_patch(plt.Circle((x, y), r, alpha=alpha, color=facecolor, ec=edgecolor, lw=2))
+    if selected_type in ["All", row.Type]:
+        ax.text(x, y, label, ha='center', va='center', fontsize=10)
 
-# Save to in-memory buffer
+# --- Save chart to buffer and display ---
 buf = BytesIO()
-plt.savefig(buf, format="png", bbox_inches='tight')
+plt.savefig(buf, format="png", bbox_inches='tight', dpi=200)
 buf.seek(0)
-
-# --- Display in Streamlit ---
 st.image(buf, caption="Packed Bubble Chart: Avg CO₂ Cost per Model Type", use_column_width=True)
 
-# --- Area chart data ---
+# --- Prepare Altair chart data ---
 df["Month"] = df["Upload To Hub Date"].dt.to_period("M").dt.to_timestamp()
 monthly = df.groupby(["Month", "Type"])["CO₂ cost (kg)"].sum().reset_index()
 monthly["Cumulative CO₂"] = monthly.sort_values("Month").groupby("Type")["CO₂ cost (kg)"].cumsum()
 
-# --- Altair interactive chart ---
-type_selection = alt.selection_point(fields=["Type"], bind="legend")
+# --- Apply filter ---
+if selected_type != "All":
+    monthly = monthly[monthly["Type"] == selected_type]
+
+# --- Altair Chart ---
 zoom = alt.selection_interval(bind="scales")
 
 area_chart = alt.Chart(monthly).mark_area(interpolate="monotone").encode(
     x=alt.X("Month:T", title="Month", axis=alt.Axis(format="%b %Y")),
-    y=alt.Y("Cumulative CO₂:Q", title="Cumulative CO₂ Emissions (kg)"),
-    color=alt.Color("Type:N", legend=alt.Legend(title="Model Type")),
-    opacity=alt.condition(type_selection, alt.value(1.0), alt.value(0.15)),
+    y=alt.Y("Cumulative CO₂:Q", title="Cumulative CO₂ Emissions (kg)", stack="zero"),
+    color=alt.Color("Type:N", legend=None),
     tooltip=[
         alt.Tooltip("Month:T", title="Month", format="%B %Y"),
         alt.Tooltip("Type:N"),
         alt.Tooltip("Cumulative CO₂:Q", format=",.0f")
     ]
-).add_params(type_selection, zoom).properties(
-    title="Cumulative CO₂ Emissions Over Time",
+).add_params(zoom).properties(
+    title="Cumulative CO₂ Emissions Over Time (Zoom Enabled)",
     width=800,
     height=400
 )
