@@ -5,6 +5,8 @@ import altair as alt
 import matplotlib.pyplot as plt
 import circlify
 from io import BytesIO
+from matplotlib import cm  # ✅ this one!
+from matplotlib.colors import to_hex
 
 
 
