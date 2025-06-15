@@ -178,25 +178,30 @@ df = df.dropna(subset=["CO₂ cost (kg)", "Upload To Hub Date", "Type"])
 
 # --- Use CO₂ as radius directly ---
 grouped = df.groupby("Type", as_index=False)["CO₂ cost (kg)"].mean()
-grouped = grouped.sort_values("CO₂ cost (kg)", ascending=False)
+grouped = grouped.sort_values("CO₂ cost (kg)", ascending=False).reset_index(drop=True)
 
-# Circlify
+# --- Generate packed circle layout from values ---
 circles = circlify.circlify(
     grouped["CO₂ cost (kg)"].tolist(),
     show_enclosure=False,
     target_enclosure=circlify.Circle(x=0, y=0, r=1)
 )
 
-# Scale up for better visuals
-scale = 400  # adjust for chart size
-layout_df = pd.DataFrame([{
-    "x": circle.x * scale,
-    "y": circle.y * scale,
-    "r": circle.r * scale,
-    "Type": grouped.iloc[i]["Type"],
-    "CO₂ cost (kg)": grouped.iloc[i]["CO₂ cost (kg)"],
-    "CO₂ Rounded": round(grouped.iloc[i]["CO₂ cost (kg)"], 1)
-} for i, circle in enumerate(circles)])
+# --- Apply uniform scale to map to screen size ---
+scale = 400  # increase for larger bubbles
+layout_df = pd.DataFrame([
+    {
+        "x": c.x * scale,
+        "y": c.y * scale,
+        "r": c.r * scale,
+        "Type": grouped.loc[i, "Type"],
+        "CO₂ cost (kg)": grouped.loc[i, "CO₂ cost (kg)"],
+        "CO₂ Rounded": round(grouped.loc[i, "CO₂ cost (kg)"], 1),
+        "Size": (c.r * scale) ** 2 * np.pi  # Altair uses area for size
+    }
+    for i, c in enumerate(circles)
+])
+
 
 # Add Altair size (area)
 layout_df["Size"] = layout_df["r"] ** 2 * np.pi
