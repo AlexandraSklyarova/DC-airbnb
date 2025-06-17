@@ -173,65 +173,68 @@ df = pd.read_csv("open-llm-leaderboards.csv")
 
 
 
-# --- Clean and Prepare ---
-df.columns = df.columns.str.strip()
-df = df.rename(columns={"Average ⬆️": "Average"})
-df = df.dropna(subset=["Hub ❤️", "Average", "eval_name"])
-df["Hub ❤️"] = pd.to_numeric(df["Hub ❤️"], errors="coerce")
-df["Average"] = pd.to_numeric(df["Average"], errors="coerce")
-df = df.dropna(subset=["Hub ❤️", "Average"])
-
-# --- Clip extremely high likes to prevent long tail distortion ---
-df = df[df["Hub ❤️"] <= 1500]
-
-# --- Bin both dimensions ---
-df["Average_Bin"] = ((df["Average"] // 5) * 5).astype(int)
-df["Hub_Bin"] = ((df["Hub ❤️"] // 100) * 100).astype(int)
-
-# --- Count models per bin ---
-heatmap_data = df.groupby(["Average_Bin", "Hub_Bin"], as_index=False).agg(
-    Model_Count=("eval_name", "count")
+long_df = grouped.melt(
+    id_vars=["Type"],
+    value_vars=score_cols,
+    var_name="Metric",
+    value_name="Score"
 )
 
-# --- Fill in missing grid cells to remove gaps ---
-avg_bins = pd.DataFrame({"Average_Bin": sorted(df["Average_Bin"].unique())})
-hub_bins = pd.DataFrame({"Hub_Bin": sorted(df["Hub_Bin"].unique())})
-full_grid = avg_bins.merge(hub_bins, how="cross")
-heatmap_data = full_grid.merge(heatmap_data, on=["Average_Bin", "Hub_Bin"], how="left")
-heatmap_data["Model_Count"] = heatmap_data["Model_Count"].fillna(0)
+# --- Shared selection ---
+metric_selection = alt.selection_point(fields=["Metric"], bind="legend")  # optional bind
 
-# --- Create the heatmap ---
-import altair as alt
+# --- Base bar chart ---
+base = alt.Chart(long_df).mark_bar().encode(
+    x=alt.X("Metric:N", title="Evaluation Metric"),
+    y=alt.Y("Score:Q", title="Average Score", scale=alt.Scale(domain=[0, 55])),
+    color=alt.Color("Metric:N", legend=alt.Legend(title="Select Metric")),
+    opacity=alt.condition(metric_selection, alt.value(1.0), alt.value(0.2)),
+    tooltip=["Type:N", "Metric:N", alt.Tooltip("Score:Q", format=".2f")]
+).add_params(metric_selection)
 
-heatmap = alt.Chart(heatmap_data).mark_rect().encode(
-    x=alt.X("Average_Bin:O", title="Average Score (5-point bins)", axis=alt.Axis(labelAngle=0)),
-    y=alt.Y("Hub_Bin:O", title="Like Count (100-point bins)"),
-    color=alt.Color("Model_Count:Q",
-                    title="Number of Models",
-                    scale=alt.Scale(type='log', scheme="blues")),
-    tooltip=[
-        alt.Tooltip("Average_Bin:O", title="Average Score Bin"),
-        alt.Tooltip("Hub_Bin:O", title="Likes Bin"),
-        alt.Tooltip("Model_Count:Q", title="Number of Models")
-    ]
+# --- Add labels ---
+labels = alt.Chart(long_df).mark_text(
+    align="center",
+    baseline="bottom",
+    dy=-5,
+    fontSize=11
+).encode(
+    x="Metric:N",
+    y="Score:Q",
+    text=alt.Text("Score:Q", format=".2f"),
+    opacity=alt.condition(metric_selection, alt.value(1.0), alt.value(0.2))
+)
+
+# --- Combine bar and text, then facet by Type ---
+chart = (base + labels).facet(
+    column=alt.Column("Type:N", title=None, header=alt.Header(labelAngle=0))
 ).properties(
-    title="🔥 Model Evaluation Density by Score and Likes",
-    width=700,
-    height=450
-).configure_axis(
-    grid=True,
-    gridOpacity=0.1,
-    labelFontSize=12,
-    titleFontSize=14
-).configure_title(
-    fontSize=18,
-    anchor="start",
-    font="Helvetica"
-).configure_view(
-    stroke=None
+    title="Scores by Evaluation Metric (scroll left to the legend to highlight a single metric across all types of LLMs)",
+    spacing=60  # ✅ Apply spacing here
+).resolve_scale(
+    y="shared"  # If you want the y-axis consistent
+)
+# --- Center the chart using HTML/CSS ---
+st.markdown(
+    """
+    <div style="display: flex; justify-content: center;">
+        <div style="max-width: 90%;">
+    """,
+    unsafe_allow_html=True,
 )
 
-st.altair_chart(heatmap, use_container_width=True)
+# --- Show the chart inside the centered container ---
+st.altair_chart(chart, use_container_width=False)
+
+# --- Close the HTML containers ---
+st.markdown(
+    """
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 
 
 
