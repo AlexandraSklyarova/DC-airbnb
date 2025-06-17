@@ -290,7 +290,4 @@ heatmap = alt.Chart(heatmap_data).mark_rect().encode(
 st.altair_chart(heatmap, use_container_width=True)
 
 
-    st.markdown("#### Evaluation Benchmarks")
-    for eval_name, content in evaluation_summary.items():
-        with st.expander(eval_name):
-            st.markdown(content["Description"])
+ 
