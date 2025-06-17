@@ -173,85 +173,6 @@ df = pd.read_csv("open-llm-leaderboards.csv")
 
 
 
-df.columns = df.columns.str.strip()
-df["Upload To Hub Date"] = pd.to_datetime(df["Upload To Hub Date"], errors="coerce")
-df = df.dropna(subset=["Upload To Hub Date", "Type"])
-
-# --- Sidebar: selection ---
-unique_types = df["Type"].unique().tolist()
-selected_type = st.selectbox("Highlight a Model Type", ["All"] + unique_types)
-
-# --- Group by count (number of models per type)
-grouped = df.groupby("Type", as_index=False).size().rename(columns={"size": "Count"})
-grouped = grouped.sort_values("Count", ascending=False).reset_index(drop=True)
-
-values = grouped["Count"].tolist()
-type_list = grouped["Type"].tolist()
-
-# --- Color mapping
-cmap = cm.get_cmap("tab20", len(type_list))
-type_colors = {t: to_hex(cmap(i)) for i, t in enumerate(type_list)}
-
-# --- Circlify layout (area ∝ count)
-circles = circlify.circlify(
-    values,
-    show_enclosure=False,
-    target_enclosure=circlify.Circle(x=0, y=0, r=1)
-)
-
-# --- Bubble chart (matplotlib)
-fig, ax = plt.subplots(figsize=(10, 10))
-ax.axis('off')
-lim = max(max(abs(c.x) + c.r, abs(c.y) + c.r) for c in circles)
-plt.xlim(-lim, lim)
-plt.ylim(-lim, lim)
-
-for circle, row in zip(circles, grouped.itertuples()):
-    x, y, r = circle.x, circle.y, circle.r
-    label = f"{row.Type}\n{row.Count}"
-    facecolor = type_colors[row.Type]
-    edgecolor = 'black' if selected_type in ["All", row.Type] else 'gray'
-    alpha = 1.0 if selected_type in ["All", row.Type] else 0.1
-    ax.add_patch(plt.Circle((x, y), r, alpha=alpha, color=facecolor, ec=edgecolor, lw=2))
-    if selected_type in ["All", row.Type]:
-        ax.text(x, y, label, ha='center', va='center', fontsize=10)
-
-buf = BytesIO()
-plt.savefig(buf, format="png", bbox_inches='tight', dpi=200)
-buf.seek(0)
-st.image(buf, caption="Packed Bubble Chart (Model Count per Type)", use_column_width=True)
-
-# --- Time series chart (still uses CO₂)
-df["Month"] = df["Upload To Hub Date"].dt.to_period("M").dt.to_timestamp()
-df["CO₂ cost (kg)"] = pd.to_numeric(df["CO₂ cost (kg)"], errors="coerce")
-df = df.dropna(subset=["CO₂ cost (kg)"])
-monthly = df.groupby(["Month", "Type"])["CO₂ cost (kg)"].sum().reset_index()
-monthly["Cumulative CO₂"] = monthly.sort_values("Month").groupby("Type")["CO₂ cost (kg)"].cumsum()
-
-if selected_type != "All":
-    monthly = monthly[monthly["Type"] == selected_type]
-
-color_scale = alt.Scale(domain=type_list, range=[type_colors[t] for t in type_list])
-zoom = alt.selection_interval(bind="scales")
-
-area_chart = alt.Chart(monthly).mark_area(interpolate="monotone").encode(
-    x=alt.X("Month:T", title="Month", axis=alt.Axis(format="%b %Y")),
-    y=alt.Y("Cumulative CO₂:Q", title="Cumulative CO₂ Emissions (kg)"),
-    color=alt.Color("Type:N", scale=color_scale, legend=None),
-    tooltip=[
-        alt.Tooltip("Month:T", title="Month", format="%B %Y"),
-        alt.Tooltip("Type:N"),
-        alt.Tooltip("Cumulative CO₂:Q", format=",.0f")
-    ]
-).add_params(zoom).properties(
-    title="Cumulative CO₂ Emissions Over Time",
-    width=800,
-    height=400
-)
-
-st.altair_chart(area_chart, use_container_width=True)
-
-
 # --- Clean and Prepare Data ---
 df.columns = df.columns.str.strip()
 df = df.rename(columns={"Average ⬆️": "Average"})
@@ -261,28 +182,40 @@ df["Hub ❤️"] = pd.to_numeric(df["Hub ❤️"], errors="coerce")
 df["Average"] = pd.to_numeric(df["Average"], errors="coerce")
 df = df.dropna(subset=["Hub ❤️", "Average"])
 
-# --- Bin Average Score into 5-point intervals ---
+# --- Binning ---
 df["Average_Bin"] = ((df["Average"] // 5) * 5).astype(int)
+df["Hub_Bin"] = ((df["Hub ❤️"] // 10) * 10).astype(int)
 
-# --- Group and Aggregate ---
-binned_avg = df.groupby("Average_Bin", as_index=False).agg(
-    Mean_Hub_Score=("Hub ❤️", "mean"),
+# --- Group and count ---
+heatmap_data = df.groupby(["Average_Bin", "Hub_Bin"], as_index=False).agg(
     Eval_Count=("eval_name", "count")
 )
 
-# --- Heatmap-style Encoding with mark_rect (constant height) ---
-heatmap = alt.Chart(binned_avg).mark_rect(height=40).encode(
+# --- Create all combinations using pandas cross join ---
+avg_bins = pd.DataFrame({"Average_Bin": sorted(df["Average_Bin"].unique())})
+hub_bins = pd.DataFrame({"Hub_Bin": sorted(df["Hub_Bin"].unique())})
+full_grid = avg_bins.merge(hub_bins, how="cross")  # ← no itertools!
+
+# --- Merge and fill missing values ---
+heatmap_data = full_grid.merge(heatmap_data, on=["Average_Bin", "Hub_Bin"], how="left")
+heatmap_data["Eval_Count"] = heatmap_data["Eval_Count"].fillna(0)
+
+# --- Build Altair Heatmap ---
+heatmap = alt.Chart(heatmap_data).mark_rect().encode(
     x=alt.X("Average_Bin:O", title="Average Score Bin (5 pt range)"),
-    color=alt.Color("Mean_Hub_Score:Q", scale=alt.Scale(scheme="blues"), title="Mean Number of Likes"),
+    y=alt.Y("Hub_Bin:O", title="Like Score Bin (10 pt range)"),
+    color=alt.Color("Eval_Count:Q",
+                    title="Number of Models",
+                    scale=alt.Scale(scheme="blues", domain=[0, heatmap_data["Eval_Count"].max()])),
     tooltip=[
         alt.Tooltip("Average_Bin:O", title="Average Score Bin"),
-        alt.Tooltip("Mean_Hub_Score:Q", title="Mean Number of Likes", format=".1f"),
-        alt.Tooltip("Eval_Count:Q", title="Number of Models")
+        alt.Tooltip("Hub_Bin:O", title="Like Score Bin"),
+        alt.Tooltip("Eval_Count:Q", title="Model Count")
     ]
 ).properties(
-    title="Mean Number of Likes by Average Score Bin (Heatmap Style)",
+    title="Evaluation Density by Average Score and Likes",
     width=600,
-    height=80
+    height=400
 )
 
 st.altair_chart(heatmap, use_container_width=True)
