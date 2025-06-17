@@ -184,7 +184,7 @@ df = df.dropna(subset=["Hub ❤️", "Average"])
 
 # --- Binning ---
 df["Average_Bin"] = ((df["Average"] // 5) * 5).astype(int)
-df["Hub_Bin"] = ((df["Hub ❤️"] // 10) * 10).astype(int)
+df["Hub_Bin"] = ((df["Hub ❤️"] // 50) * 50).astype(int)
 
 # --- Group and count ---
 heatmap_data = df.groupby(["Average_Bin", "Hub_Bin"], as_index=False).agg(
@@ -203,7 +203,7 @@ heatmap_data["Eval_Count"] = heatmap_data["Eval_Count"].fillna(0)
 # --- Build Altair Heatmap ---
 heatmap = alt.Chart(heatmap_data).mark_rect().encode(
     x=alt.X("Average_Bin:O", title="Average Score Bin (5 pt range)"),
-    y=alt.Y("Hub_Bin:O", title="Like Score Bin (10 pt range)"),
+    y=alt.Y("Hub_Bin:O", title="Like Score Bin (50 pt range)"),
     color=alt.Color("Eval_Count:Q",
                     title="Number of Models",
                     scale=alt.Scale(scheme="blues", domain=[0, heatmap_data["Eval_Count"].max()])),
