@@ -256,38 +256,37 @@ st.altair_chart(area_chart, use_container_width=True)
 df.columns = df.columns.str.strip()
 df = df.rename(columns={"Average ⬆️": "Average"})
 
-# Ensure numeric and drop invalid rows
 df = df.dropna(subset=["Hub ❤️", "Average", "eval_name"])
 df["Hub ❤️"] = pd.to_numeric(df["Hub ❤️"], errors="coerce")
 df["Average"] = pd.to_numeric(df["Average"], errors="coerce")
 df = df.dropna(subset=["Hub ❤️", "Average"])
 
-# --- Binning Both Average and Hub Scores ---
+# --- Bin Average Score into 5-point intervals ---
 df["Average_Bin"] = ((df["Average"] // 5) * 5).astype(int)
-df["Hub_Bin"] = ((df["Hub ❤️"] // 10) * 10).astype(int)
 
-# --- Group by both bins and count evaluations ---
-heatmap_data = df.groupby(["Average_Bin", "Hub_Bin"], as_index=False).agg(
+# --- Group and Aggregate ---
+binned_avg = df.groupby("Average_Bin", as_index=False).agg(
+    Mean_Hub_Score=("Hub ❤️", "mean"),
     Eval_Count=("eval_name", "count")
 )
 
-# --- Altair Heatmap ---
-heatmap = alt.Chart(heatmap_data).mark_rect().encode(
+# --- Heatmap-style Encoding with mark_rect (constant height) ---
+heatmap = alt.Chart(binned_avg).mark_rect(height=40).encode(
     x=alt.X("Average_Bin:O", title="Average Score Bin (5 pt range)"),
-    y=alt.Y("Hub_Bin:O", title="Like Score Bin (10 pt range)"),
-    color=alt.Color("Eval_Count:Q", title="Number of Models", scale=alt.Scale(scheme="blues")),
+    color=alt.Color("Mean_Hub_Score:Q", scale=alt.Scale(scheme="blues"), title="Mean Number of Likes"),
     tooltip=[
         alt.Tooltip("Average_Bin:O", title="Average Score Bin"),
-        alt.Tooltip("Hub_Bin:O", title="Like Score Bin"),
-        alt.Tooltip("Eval_Count:Q", title="Model Count")
+        alt.Tooltip("Mean_Hub_Score:Q", title="Mean Number of Likes", format=".1f"),
+        alt.Tooltip("Eval_Count:Q", title="Number of Models")
     ]
 ).properties(
-    title="Evaluation Density by Average Score and Likes",
+    title="Mean Number of Likes by Average Score Bin (Heatmap Style)",
     width=600,
-    height=400
+    height=80
 )
 
 st.altair_chart(heatmap, use_container_width=True)
+
 
 
  
