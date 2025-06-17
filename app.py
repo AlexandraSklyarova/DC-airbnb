@@ -173,12 +173,19 @@ df = pd.read_csv("open-llm-leaderboards.csv")
 
 
 
+score_cols = ["IFEval", "BBH", "MATH Lvl 5", "GPQA", "MuSR", "MMLU-Pro"]  # adjust as needed
+
+# Group and average across model types
+grouped = df.groupby("Type", as_index=False)[score_cols].mean()
+
+# Melt to long format for plotting
 long_df = grouped.melt(
     id_vars=["Type"],
     value_vars=score_cols,
     var_name="Metric",
     value_name="Score"
 )
+
 
 # --- Shared selection ---
 metric_selection = alt.selection_point(fields=["Metric"], bind="legend")  # optional bind
