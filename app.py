@@ -173,49 +173,62 @@ df = pd.read_csv("open-llm-leaderboards.csv")
 
 
 
-# --- Clean and Prepare Data ---
+# --- Clean and Prepare ---
 df.columns = df.columns.str.strip()
 df = df.rename(columns={"Average ⬆️": "Average"})
-
 df = df.dropna(subset=["Hub ❤️", "Average", "eval_name"])
 df["Hub ❤️"] = pd.to_numeric(df["Hub ❤️"], errors="coerce")
 df["Average"] = pd.to_numeric(df["Average"], errors="coerce")
 df = df.dropna(subset=["Hub ❤️", "Average"])
 
-# --- Binning ---
-df["Average_Bin"] = ((df["Average"] // 5) * 5).astype(int)
-df["Hub_Bin"] = ((df["Hub ❤️"] // 50) * 50).astype(int)
+# --- Clip extremely high likes to prevent long tail distortion ---
+df = df[df["Hub ❤️"] <= 1500]
 
-# --- Group and count ---
+# --- Bin both dimensions ---
+df["Average_Bin"] = ((df["Average"] // 5) * 5).astype(int)
+df["Hub_Bin"] = ((df["Hub ❤️"] // 100) * 100).astype(int)
+
+# --- Count models per bin ---
 heatmap_data = df.groupby(["Average_Bin", "Hub_Bin"], as_index=False).agg(
-    Eval_Count=("eval_name", "count")
+    Model_Count=("eval_name", "count")
 )
 
-# --- Create all combinations using pandas cross join ---
+# --- Fill in missing grid cells to remove gaps ---
 avg_bins = pd.DataFrame({"Average_Bin": sorted(df["Average_Bin"].unique())})
 hub_bins = pd.DataFrame({"Hub_Bin": sorted(df["Hub_Bin"].unique())})
-full_grid = avg_bins.merge(hub_bins, how="cross")  # ← no itertools!
-
-# --- Merge and fill missing values ---
+full_grid = avg_bins.merge(hub_bins, how="cross")
 heatmap_data = full_grid.merge(heatmap_data, on=["Average_Bin", "Hub_Bin"], how="left")
-heatmap_data["Eval_Count"] = heatmap_data["Eval_Count"].fillna(0)
+heatmap_data["Model_Count"] = heatmap_data["Model_Count"].fillna(0)
 
-# --- Build Altair Heatmap ---
+# --- Create the heatmap ---
+import altair as alt
+
 heatmap = alt.Chart(heatmap_data).mark_rect().encode(
-    x=alt.X("Average_Bin:O", title="Average Score Bin (5 pt range)"),
-    y=alt.Y("Hub_Bin:O", title="Like Score Bin (50 pt range)"),
-    color=alt.Color("Eval_Count:Q",
+    x=alt.X("Average_Bin:O", title="Average Score (5-point bins)", axis=alt.Axis(labelAngle=0)),
+    y=alt.Y("Hub_Bin:O", title="Like Count (100-point bins)"),
+    color=alt.Color("Model_Count:Q",
                     title="Number of Models",
-                    scale=alt.Scale(scheme="blues", domain=[0, heatmap_data["Eval_Count"].max()])),
+                    scale=alt.Scale(type='log', scheme="blues")),
     tooltip=[
         alt.Tooltip("Average_Bin:O", title="Average Score Bin"),
-        alt.Tooltip("Hub_Bin:O", title="Like Score Bin"),
-        alt.Tooltip("Eval_Count:Q", title="Model Count")
+        alt.Tooltip("Hub_Bin:O", title="Likes Bin"),
+        alt.Tooltip("Model_Count:Q", title="Number of Models")
     ]
 ).properties(
-    title="Evaluation Density by Average Score and Likes",
-    width=600,
-    height=400
+    title="🔥 Model Evaluation Density by Score and Likes",
+    width=700,
+    height=450
+).configure_axis(
+    grid=True,
+    gridOpacity=0.1,
+    labelFontSize=12,
+    titleFontSize=14
+).configure_title(
+    fontSize=18,
+    anchor="start",
+    font="Helvetica"
+).configure_view(
+    stroke=None
 )
 
 st.altair_chart(heatmap, use_container_width=True)
