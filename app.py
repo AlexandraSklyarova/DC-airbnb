@@ -142,27 +142,7 @@ scatter_chart = alt.Chart(df_price_plot).mark_circle(size=60).encode(
 
 st.altair_chart(scatter_chart, use_container_width=True)
 
-# --- Linked Strip Chart ---
-st.header("Review Scores by Host Year and Superhost Status")
 
-strip_chart = alt.Chart(df_filtered).mark_tick(thickness=2, size=12).encode(
-    x=alt.X('host_year:O', title='Host Since (Year)'),
-    y=alt.Y('review_scores_rating:Q', title='Review Score Rating'),
-    color=alt.Color('host_is_superhost:N',
-                    title='Superhost',
-                    scale=alt.Scale(domain=['t', 'f'],
-                                    range=['lightgreen', 'lightcoral'])),
-    tooltip=['host_year', 'review_scores_rating', 'host_is_superhost', 'host_neighbourhood'],
-    opacity=alt.condition(highlight, alt.value(1), alt.value(0.075))
-).add_params(
-    highlight
-).properties(
-    width=900,
-    height=500,
-    title='Review Scores by Host Year and Superhost Status (Click to Filter by Neighborhood)'
-)
-
-st.altair_chart(strip_chart, use_container_width=True)
 
 
 
