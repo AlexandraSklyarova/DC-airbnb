@@ -250,3 +250,128 @@ area_chart = alt.Chart(monthly).mark_area(interpolate="monotone").encode(
 )
 
 st.altair_chart(area_chart, use_container_width=True)
+
+
+
+st.markdown("### Model Type Key")
+st.markdown("Learn about the types of models included in this dashboard:")
+
+model_type_explanations = {
+    "🟢 Pretrained Model": """
+**Pretrained Model**
+- Newly trained from scratch using masked or causal language modeling.
+- Trained on large corpora like Common Crawl, Wikipedia, books, etc.
+- Forms the backbone of more advanced fine-tuned or merged models.
+""",
+    "🟩 Continuously Pretrained Model": """
+**Continuously Pretrained Model**
+- Built from existing pretrained models.
+- Further trained on more recent or curated corpora.
+- May include instruction tuning, domain-specific datasets, or chat data.
+""",
+    "🔶 Fine-Tuned on Domain-Specific Datasets": """
+**Fine-Tuned Model**
+- Pretrained models adapted to specific domains (e.g., medical, legal).
+- Fine-tuned on additional data without modifying architecture.
+- Usually boosts performance on target tasks at the cost of generality.
+""",
+    "💬 Chat Models (RLHF, DPO, IFT…)": """
+**Chat Models**
+- Trained using **Instruction-Following Tuning (IFT)**, **Reinforcement Learning with Human Feedback (RLHF)**, or **Direct Preference Optimization (DPO)**.
+- Tailored for natural conversation, task following, and user preference alignment.
+- Can output safer, more controllable text in interactive settings.
+""",
+    "🤝 Base Merges and MoErges": """
+**Merged Models (Base Merges / MoErges)**
+- Created by combining weights from multiple base or fine-tuned models.
+- May use **merge techniques** like addition, interpolation, or LoRA stacking.
+- Usually *not* trained further after merging.
+- Useful for combining capabilities or styles.
+""",
+    "🌸 Multimodal Models": """
+**Multimodal Models**
+- Can process inputs from different modalities like **text**, **images**, **audio**, or **video**.
+- Examples include image captioning, vision-language models, and audio reasoning.
+- Represent the next frontier in general AI capabilities.
+"""
+}
+
+evaluation_summary = {
+    "IFEval": {
+        "Description": """
+**IFEval** checks whether a model can follow explicit formatting instructions.
+
+- Focuses on format adherence, not correctness  
+- Includes tasks like:  
+  - *“Include the keyword X”*  
+  - *“Respond using format Y”*  
+- Useful for evaluating models as tools in pipeline-style workflows
+"""
+    },
+    "BBH": {
+        "Description": """
+**BBH** (Beyond the Imitation Game Benchmark) is a challenging reasoning benchmark.
+
+- Covers 23 BigBench tasks including:  
+  - Logic puzzles  
+  - Math word problems  
+  - Symbolic reasoning  
+- Highly correlated with human preference judgments
+"""
+    },
+    "MATH Lvl 5": {
+        "Description": """
+**MATH Lvl 5** consists of high school math competition problems.
+
+- Includes problems from contests like AMC and AIME  
+- Requires exact formatting (LaTeX, Asymptote)  
+- Emphasizes correctness, clarity, and structured output
+"""
+    },
+    "GPQA": {
+        "Description": """
+**GPQA** is a graduate-level STEM question set vetted by domain experts.
+
+- Topics include:  
+  - Biology  
+  - Chemistry  
+  - Physics  
+- Designed to avoid test-set contamination  
+- Emphasizes true conceptual depth over pattern matching
+"""
+    },
+    "MuSR": {
+        "Description": """
+**MuSR** (Multistep Structured Reasoning) features long-context challenges.
+
+- Includes:  
+  - Logic puzzles  
+  - Mystery reasoning  
+  - Logistics chains  
+- Tests the model's ability to track dependencies over long input
+"""
+    },
+    "MMLU-Pro": {
+        "Description": """
+**MMLU-Pro** is a professional-grade variant of MMLU.
+
+- Differences from original MMLU:  
+  - 10 multiple-choice options (harder)  
+  - Expert-reviewed and cleaned  
+  - Harder distractors and fewer flaws  
+- Emphasizes nuanced world knowledge and test-taking skill
+"""
+    }
+}
+
+# Outer dropdown
+with st.expander("📘 Learn About Model Types and Evaluation Benchmarks"):
+    st.markdown("#### Model Types")
+    for label, description in model_type_explanations.items():
+        with st.expander(label):
+            st.markdown(description)
+
+    st.markdown("#### Evaluation Benchmarks")
+    for eval_name, content in evaluation_summary.items():
+        with st.expander(eval_name):
+            st.markdown(content["Description"])
