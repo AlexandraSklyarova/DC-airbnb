@@ -170,15 +170,15 @@ st.altair_chart(strip_chart, use_container_width=True)
 
 
 df = pd.read_csv("open-llm-leaderboards.csv")
+df.columns = df.columns.str.strip()
 
+# --- Automatically detect metric columns (exclude 'Type') ---
+score_cols = [col for col in df.columns if col != "Type" and pd.api.types.is_numeric_dtype(df[col])]
 
-
-score_cols = ["IFEval", "BBH", "MATH Lvl 5", "GPQA", "MuSR", "MMLU-Pro"]  # adjust as needed
-
-# Group and average across model types
+# --- Group and average by 'Type' ---
 grouped = df.groupby("Type", as_index=False)[score_cols].mean()
 
-# Melt to long format for plotting
+# --- Melt into long format ---
 long_df = grouped.melt(
     id_vars=["Type"],
     value_vars=score_cols,
@@ -186,9 +186,8 @@ long_df = grouped.melt(
     value_name="Score"
 )
 
-
-# --- Shared selection ---
-metric_selection = alt.selection_point(fields=["Metric"], bind="legend")  # optional bind
+# --- Shared selection for highlighting ---
+metric_selection = alt.selection_point(fields=["Metric"], bind="legend")
 
 # --- Base bar chart ---
 base = alt.Chart(long_df).mark_bar().encode(
@@ -199,7 +198,7 @@ base = alt.Chart(long_df).mark_bar().encode(
     tooltip=["Type:N", "Metric:N", alt.Tooltip("Score:Q", format=".2f")]
 ).add_params(metric_selection)
 
-# --- Add labels ---
+# --- Labels on bars ---
 labels = alt.Chart(long_df).mark_text(
     align="center",
     baseline="bottom",
@@ -212,28 +211,27 @@ labels = alt.Chart(long_df).mark_text(
     opacity=alt.condition(metric_selection, alt.value(1.0), alt.value(0.2))
 )
 
-# --- Combine bar and text, then facet by Type ---
+# --- Combine and facet by 'Type' ---
 chart = (base + labels).facet(
     column=alt.Column("Type:N", title=None, header=alt.Header(labelAngle=0))
 ).properties(
-    title="Scores by Evaluation Metric (scroll left to the legend to highlight a single metric across all types of LLMs)",
-    spacing=60  # ✅ Apply spacing here
+    title="Scores by Evaluation Metric (select a metric in the legend to highlight it)",
+    spacing=60
 ).resolve_scale(
-    y="shared"  # If you want the y-axis consistent
+    y="shared"
 )
-# --- Center the chart using HTML/CSS ---
+
+# --- Center the chart in the Streamlit app ---
 st.markdown(
     """
     <div style="display: flex; justify-content: center;">
-        <div style="max-width: 90%;">
+        <div style="max-width: 95%;">
     """,
     unsafe_allow_html=True,
 )
 
-# --- Show the chart inside the centered container ---
 st.altair_chart(chart, use_container_width=False)
 
-# --- Close the HTML containers ---
 st.markdown(
     """
         </div>
@@ -241,7 +239,6 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
 
 
 
